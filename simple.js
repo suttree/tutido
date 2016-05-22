@@ -2,25 +2,28 @@
 
 var fs = require('fs'),
     Ivona = require('ivona-node'),
-    readability = require("node-readability"),
-    sanitizer = require("sanitizer");
+    read = require("node-readability"),
+    sanitizer = require("sanitizer"),
+    Entities = require('html-entities').AllHtmlEntities;
 
 var ivona = new Ivona({
     accessKey: 'GDNAIWABFZTUS7TFCI5Q',
     secretKey: 'l5tEgLDQzeR85ZuH8/VMvS1Px7Noltuac6ZDjQwQ'
 });
 
+var entities = new Entities();
+
 // from http://nodeexamples.com/2012/09/27/scraping-a-pages-content-using-the-node-readability-module-and-node-js/
 function scraper(url, callback) {
-    readability.read(url, function(err, doc) {
+    read(url, function(err, doc) {
         if (err) {
             throw err;
         }
 
         var obj = {
             "url": url,
-            "title": doc.getTitle().trim(),
-            "contents": stripHTML(doc.getContent() || "")
+            "title": doc.title.trim(),
+            "contents": stripHTML(doc.content || "")
         };
         callback(obj);
     });
@@ -36,39 +39,48 @@ function stripHTML(html) {
     // RegEx to remove needless newlines and whitespace.
     // See: http://stackoverflow.com/questions/816085/removing-redundant-line-breaks-with-regular-expressions
     clean = clean.replace(/(?:(?:\r\n|\r|\n)\s*){2,}/ig, "\n");
+    clean = clean.replace(/(<([^>]+)>)/ig,"");
+    clean = clean.replace('&nbsp;', ' ');
+    clean = entities.decode(clean);
 
     // Return the final string, minus any leading/trailing whitespace.
     return clean.trim();
 }
 
+var args = process.argv.slice(2);
+scraper(args[0], function (data) {
+  var article;
+  var concat_list = 'concat:';
 
-var concat_list = 'concat:';
+  article = data.title + '\n\n' + data.contents
+  //console.log("# %s #\n\n%s\n\n---", data.title, data.contents);
 
-article.split('\n').forEach(function (line, i) {
-  ivona.createVoice(line, {
-      body: {
-          voice: {
-              name: 'Emma',
-              language: 'en-GB',
-              gender: 'Female'
-          }
-      }
-  }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
-  concat_list += 'tmp/text-' + i + '.mp3|';
-});
+  article.split('\n').forEach(function (line, i) {
+    ivona.createVoice(line, {
+        body: {
+            voice: {
+                name: 'Emma',
+                language: 'en-GB',
+                gender: 'Female'
+            }
+        }
+    }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
+    concat_list += 'tmp/text-' + i + '.mp3|';
+  });
 
-const exec = require('child_process').exec;
-const child = exec("ffmpeg -i \"" + concat_list.slice(0, -1) + "\" -c copy content/article.mp3");
-//const child = exec("ffmpeg -i \"" + concat_list.slice(0, -1) + "\" -acodec copy article.mp3
-//    (error, stdout, stderr) => {
-//        console.log(`stdout: ${stdout}`);
-//        console.log(`stderr: ${stderr}`);
-//        if (error !== null) {
-//            console.log(`exec error: ${error}`);
-//        }
-//});
-console.log(concat_list);
+  //const exec = require('child_process').exec;
+  //console.log(concat_list);
+  var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
+  console.log(cmd);
 
-scraper("http://www.readability.com/about", function (data) {
-  console.log("# %s #\n\n%s\n\n---", data.title, data.contents);
+  require('shelljs/global');
+  //exec(cmd, {silent:true}).output;
+
+  exec(cmd, function(err, out, code) {
+    if (err instanceof Error)
+      throw err;
+    process.stderr.write(err);
+    process.stdout.write(out);
+    process.exit(code);
+  });
 });
