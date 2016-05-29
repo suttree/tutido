@@ -67,7 +67,7 @@ request(url, function (error, response, body) {
     article = stripHTML(article);
     //console.log(article);
 
-    article.split('\n').forEach(function (line, i) {
+    article.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|").forEach(function (line, i) {
       console.log(line);
       ivona.createVoice(line, {
           body: {
@@ -79,26 +79,27 @@ request(url, function (error, response, body) {
           }   
       }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
       concat_list += 'tmp/text-' + i + '.mp3|';
+    });
 
-      //const exec = require('child_process').exec;
-      //console.log(concat_list);
-      var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
-      console.log(cmd);
+    //const exec = require('child_process').exec;
+    //console.log(concat_list);
+    var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
+    console.log(cmd);
 
-      require('shelljs/global');
-      //exec(cmd, {silent:true}).output;
+    require('shelljs/global');
+    //exec(cmd, {silent:true}).output;
 
-      //exec(cmd, function(err, out, code) {
-      //  if (err instanceof Error)
-      //    throw err;
-      //  process.stderr.write(err);
-      //  process.stdout.write(out);
-      //  process.exit(code);
-      //});
+    exec(cmd, function(err, out, code) {
+      if (err instanceof Error)
+        throw err;
+      process.stderr.write(err);
+      process.stdout.write(out);
+      process.exit(code);
     });
   } else {
     console.log("ERROR");
   }
+
 });
 //scraper(args[0], function (data) {
 //  var article;
