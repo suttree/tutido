@@ -67,7 +67,12 @@ request(url, function (error, response, body) {
     article = stripHTML(article);
     //console.log(article);
 
-    article.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|").forEach(function (line, i) {
+    ivona.listVoices().on('complete', function(voices) {
+      console.log(voices);
+      console.log(11);
+   });
+    //article.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|").forEach(function (line, i) {
+    article.split("\n").forEach(function (line, i) {
       console.log(line);
       ivona.createVoice(line, {
           body: {
@@ -75,8 +80,8 @@ request(url, function (error, response, body) {
                   name: 'Emma',
                   language: 'en-GB',
                   gender: 'Female'
-              }   
-          }   
+              }
+          }
       }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
       concat_list += 'tmp/text-' + i + '.mp3|';
     });
