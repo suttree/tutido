@@ -14,16 +14,6 @@ var ivona = new Ivona({
     secretKey: 'l5tEgLDQzeR85ZuH8/VMvS1Px7Noltuac6ZDjQwQ'
 });
 
-ivona.createVoice("hello duncan", {
-    body: {
-        voice: {
-            name: 'Emma',
-            language: 'en-GB',
-            gender: 'Female'
-        }
-    }
-}).pipe(fs.createWriteStream('tmp/duncan.mp3'));
-
 var entities = new Entities();
 
 // from http://nodeexamples.com/2012/09/27/scraping-a-pages-content-using-the-node-readability-module-and-node-js/
@@ -63,36 +53,27 @@ function stripHTML(html) {
     return clean.trim();
 }
 
-var args = process.argv.slice(2);
+function fetchArticleText(url) {
+  request(url, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      //var article;
+      //var concat_list = 'concat:';
 
-url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
-console.log(url);
+      body = JSON.parse(body);
+      article = body['title'] + '\n' + body['content'];
+      article = stripHTML(article);
 
-var article;
-var concat_list = 'concat:';
-request(url, function (error, response, body) {
-  if (!error && response.statusCode == 200) {
-    //var article;
-    //var concat_list = 'concat:';
-
-    body = JSON.parse(body);
-    article = body['title'] + '\n' + body['content'];
-    article = stripHTML(article);
-    createRecording(article);
-
-    //ivona.listVoices().on('complete', function(voices) {
-    //  console.log(voices);
-    //  console.log(11);
-    //});
-  } else {
-    console.log("ERROR");
-  }
-});
+      createRecording(article);
+    } else {
+      console.log("Failed to request url");
+    }
+  });
+}
 
 function createRecording(article) {
-  article.split("\n").forEach(function (line, i) {
-    //console.log(line);
-    //console.log('-----');
+  var concat_list = 'concat:';
+
+  article.split('\n').forEach(function (line, i) {
     ivona.createVoice(line, {
         body: {
             voice: {
@@ -102,17 +83,7 @@ function createRecording(article) {
             }
         }
     }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
-    concat_list += 'tmp/text-' + i + '.mp3|';
-
-    ivona.createVoice('Google enlists artists to make bots feel like friends', {
-        body: {
-            voice: {
-                name: 'Emma',
-                language: 'en-GB',
-                gender: 'Female'
-            }
-        }
-    }).pipe(fs.createWriteStream('tmp/duncan.mp3'));
+    concat_list += 'text-' + i + '.mp3|';
   });
 
   //const exec = require('child_process').exec;
@@ -131,3 +102,10 @@ function createRecording(article) {
     process.exit(code);
   });
 }
+
+var body;
+var article;
+var args = process.argv.slice(2);
+url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
+console.log(url);
+fetchArticleText(url);
