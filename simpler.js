@@ -1,23 +1,24 @@
 #!/usr/bin/env node
+require('shelljs/global');
 
-var read = require("node-readability"),
+var fs = require('fs'),
   Ivona = require('ivona-node'),
   request = require('request'),
-  fs = require('fs'),
-  sanitizer = require("sanitizer");
+  sanitizer = require("sanitizer"),
+  Entities = require('html-entities').AllHtmlEntities;
 
 var ivona = new Ivona({
   accessKey: 'GDNAIWABFZTUS7TFCI5Q',
   secretKey: 'l5tEgLDQzeR85ZuH8/VMvS1Px7Noltuac6ZDjQwQ'
 });
 
-require('shelljs/global');
+var entities = new Entities();
 
 var args = process.argv.slice(2);
 url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
 
 scraper(url, function (data) {
-  console.log(data);
+  //console.log(data);
   var concat_list = 'concat:';
   var article = data.title + '\n' + data.contents;
   article.split(/\n/).forEach(function (line, i) {
@@ -56,20 +57,6 @@ function scraper(url, callback) {
       callback(obj);
     }
   });
-  //read(url, function(err, doc) {
-  //    if (err) {
-  //        throw err;
-  //    }
-  //
-  //    var obj = {
-  //        "url": url,
-  //        "title": doc.title,
-  //        "excerpt": doc.excerpt,
-  //        "lead_image_url": doc.lead_image_url,
-  //        "contents": stripHTML(doc.content || "")
-  //    };
-  //    callback(obj);
-  //});
 }
 
 function stripHTML(html) {
@@ -82,6 +69,10 @@ function stripHTML(html) {
     // RegEx to remove needless newlines and whitespace.
     // See: http://stackoverflow.com/questions/816085/removing-redundant-line-breaks-with-regular-expressions
     clean = clean.replace(/(?:(?:\r\n|\r|\n)\s*){2,}/ig, "\n");
+
+    clean = clean.replace(/(<([^>]+)>)/ig,"");
+    clean = clean.replace('&nbsp;', ' ');
+    clean = entities.decode(clean);
 
     // Return the final string, minus any leading/trailing whitespace.
     return clean.trim();
