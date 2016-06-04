@@ -2,6 +2,7 @@
 
 var read = require("node-readability"),
   Ivona = require('ivona-node'),
+  request = require('request'),
   fs = require('fs'),
   sanitizer = require("sanitizer");
 
@@ -13,13 +14,10 @@ var ivona = new Ivona({
 require('shelljs/global');
 
 var args = process.argv.slice(2);
-//url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
-url = args[0];
-
+url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
 
 scraper(url, function (data) {
-  //console.log(data);
-
+  console.log(data);
   var concat_list = 'concat:';
   var article = data.title + '\n' + data.contents;
   article.split(/\n/).forEach(function (line, i) {
@@ -44,20 +42,34 @@ scraper(url, function (data) {
 });
 
 function scraper(url, callback) {
-    read(url, function(err, doc) {
-        if (err) {
-            throw err;
-        }
+  request(url, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      doc = JSON.parse(body);
 
-        var obj = {
-            "url": url,
-            "title": doc.title,
-            "excerpt": doc.excerpt,
-            "lead_image_url": doc.lead_image_url,
-            "contents": stripHTML(doc.content || "")
-        };
-        callback(obj);
-    });
+      var obj = {
+          "url": url,
+          "title": doc.title,
+          "excerpt": doc.excerpt,
+          "lead_image_url": doc.lead_image_url,
+          "contents": stripHTML(doc.content || "")
+      };
+      callback(obj);
+    }
+  });
+  //read(url, function(err, doc) {
+  //    if (err) {
+  //        throw err;
+  //    }
+  //
+  //    var obj = {
+  //        "url": url,
+  //        "title": doc.title,
+  //        "excerpt": doc.excerpt,
+  //        "lead_image_url": doc.lead_image_url,
+  //        "contents": stripHTML(doc.content || "")
+  //    };
+  //    callback(obj);
+  //});
 }
 
 function stripHTML(html) {
