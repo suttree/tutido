@@ -1,12 +1,10 @@
 // TODO hide access token
-//
-// create mp3s with link and picture in the metadata (for the iPlayer archives?)
 
 var fs = require('fs'),
     Ivona = require('ivona-node'),
     read = require("node-readability"),
     sanitizer = require("sanitizer"),
-    request = require('request'),
+    //request = require('request'),
     Entities = require('html-entities').AllHtmlEntities;
 
 var ivona = new Ivona({
@@ -28,8 +26,9 @@ function scraper(url, callback) {
             "url": url,
             "title": doc.title.trim(),
             "contents": stripHTML(doc.content || ""),
-            "test": doc.content,
             "html": doc.html,
+            "excerpt": doc.excerpt,
+            "lead_image_url": doc.lead_image_url,
         };
         callback(obj);
     });
@@ -39,6 +38,7 @@ function stripHTML(html) {
     var clean = sanitizer.sanitize(html, function (str) {
         return str;
     });
+
     // Remove all remaining HTML tags.
     clean = clean.replace(/<(?:.|\n)*?>/gm, "");
 
@@ -54,19 +54,17 @@ function stripHTML(html) {
 }
 
 function fetchArticleText(url) {
-  request(url, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      //var article;
-      //var concat_list = 'concat:';
+  scraper(url, function (data) {
+    article = data.title + '\n' + data.contents;
+    article = stripHTML(article);
 
-      body = JSON.parse(body);
-      article = body['title'] + '\n' + body['content'];
-      article = stripHTML(article);
+    var concat_list = 'concat:';
 
-      var concat_list = 'concat:';
-
-      //article = "Hello duncan\n how are you?"
-      article.split('\n').forEach(function (line, i) {
+    //article = "Hello duncan\n how are you?"
+    article.split(/\\n/).forEach(function (line, i) {
+      if (/\S/.test(line)) {
+        console.log(line);
+        console.log('----');
         ivona.createVoice(line, {
             body: {
                 voice: {
@@ -77,27 +75,25 @@ function fetchArticleText(url) {
             }
         }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
         concat_list += 'tmp/text-' + i + '.mp3|';
-        sleep(5);
-      });
+      }
+    });
 
-      //const exec = require('child_process').exec;
-      //console.log(concat_list);
-      var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
-      console.log(cmd);
+    //const exec = require('child_process').exec;
+    //console.log(concat_list);
+    var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
+    console.log(cmd);
 
-      require('shelljs/global');
-      //exec(cmd, {silent:true}).output;
+    require('shelljs/global');
+    //exec(cmd, {silent:true}).output;
 
-      exec(cmd, function(err, out, code) {
-        if (err instanceof Error)
-          throw err;
-        process.stderr.write(err);
-        process.stdout.write(out);
-        process.exit(code);
-      });
-    } else {
-      console.log("Failed to request url");
-    }
+    exec(cmd, function(err, out, code) {
+      if (err instanceof Error)
+        throw err;
+
+      process.stderr.write(err);
+      process.stdout.write(out);
+      process.exit(code);
+    });
   });
 }
 
