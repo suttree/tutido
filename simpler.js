@@ -1,29 +1,30 @@
 #!/usr/bin/env node
 
-// 3rd party modules.
 var read = require("node-readability"),
-    Ivona = require('ivona-node'),
-    fs = require('fs'),
-    sanitizer = require("sanitizer");
+  Ivona = require('ivona-node'),
+  fs = require('fs'),
+  sanitizer = require("sanitizer");
 
 var ivona = new Ivona({
-    accessKey: 'GDNAIWABFZTUS7TFCI5Q',
-    secretKey: 'l5tEgLDQzeR85ZuH8/VMvS1Px7Noltuac6ZDjQwQ'
+  accessKey: 'GDNAIWABFZTUS7TFCI5Q',
+  secretKey: 'l5tEgLDQzeR85ZuH8/VMvS1Px7Noltuac6ZDjQwQ'
 });
 
-var concat_list = 'concat:';
+require('shelljs/global');
 
 var args = process.argv.slice(2);
-url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
-console.log(url);
+//url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
+url = args[0];
+
 
 scraper(url, function (data) {
-  console.log("# %s #\n\n%s\n\n---", data.title, data.contents);
+  //console.log(data);
 
-  data.contents.split(/\\n/).forEach(function (line, i) {
+  var concat_list = 'concat:';
+  var article = data.title + '\n' + data.contents;
+  article.split(/\n/).forEach(function (line, i) {
+    // add pauses between title and also when we detect any whitespace-lines
     if (/\S/.test(line)) {
-      console.log(line);
-      console.log('----');
       ivona.createVoice(line, {
           body: {
             voice: {
@@ -36,7 +37,10 @@ scraper(url, function (data) {
       concat_list += 'tmp/text-' + i + '.mp3|';
     }
   });
-  console.log(concat_list);
+
+  var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/' + Date.now() +'.mp3 -y';
+  console.log(cmd);
+  exec(cmd, {silent:true}).output;
 });
 
 function scraper(url, callback) {
@@ -47,7 +51,9 @@ function scraper(url, callback) {
 
         var obj = {
             "url": url,
-            "title": doc.title.trim(),
+            "title": doc.title,
+            "excerpt": doc.excerpt,
+            "lead_image_url": doc.lead_image_url,
             "contents": stripHTML(doc.content || "")
         };
         callback(obj);
