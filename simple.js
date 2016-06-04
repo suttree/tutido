@@ -63,43 +63,41 @@ function fetchArticleText(url) {
       article = body['title'] + '\n' + body['content'];
       article = stripHTML(article);
 
-      createRecording(article);
+      var concat_list = 'concat:';
+
+      //article = "Hello duncan\n how are you?"
+      article.split('\n').forEach(function (line, i) {
+        ivona.createVoice(line, {
+            body: {
+                voice: {
+                    name: 'Emma',
+                    language: 'en-GB',
+                    gender: 'Female'
+                }
+            }
+        }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
+        concat_list += 'tmp/text-' + i + '.mp3|';
+        sleep(5);
+      });
+
+      //const exec = require('child_process').exec;
+      //console.log(concat_list);
+      var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
+      console.log(cmd);
+
+      require('shelljs/global');
+      //exec(cmd, {silent:true}).output;
+
+      exec(cmd, function(err, out, code) {
+        if (err instanceof Error)
+          throw err;
+        process.stderr.write(err);
+        process.stdout.write(out);
+        process.exit(code);
+      });
     } else {
       console.log("Failed to request url");
     }
-  });
-}
-
-function createRecording(article) {
-  var concat_list = 'concat:';
-
-  article.split('\n').forEach(function (line, i) {
-    ivona.createVoice(line, {
-        body: {
-            voice: {
-                name: 'Emma',
-                language: 'en-GB',
-                gender: 'Female'
-            }
-        }
-    }).pipe(fs.createWriteStream('tmp/text-' + i + '.mp3'));
-    concat_list += 'text-' + i + '.mp3|';
-  });
-
-  //const exec = require('child_process').exec;
-  //console.log(concat_list);
-  var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/article.mp3';
-  console.log(cmd);
-
-  require('shelljs/global');
-  //exec(cmd, {silent:true}).output;
-
-  exec(cmd, function(err, out, code) {
-    if (err instanceof Error)
-      throw err;
-    process.stderr.write(err);
-    process.stdout.write(out);
-    process.exit(code);
   });
 }
 
