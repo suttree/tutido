@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-require('shelljs/global');
-
 var fs = require('fs'),
   Ivona = require('ivona-node'),
   request = require('request'),
   sanitizer = require("sanitizer"),
-  Entities = require('html-entities').AllHtmlEntities;
+  Entities = require('html-entities').AllHtmlEntities,
+  ffmetadata = require("ffmetadata"),
+  util = require('util'),
+  exec = require('child_process').exec;
 
 var ivona = new Ivona({
   accessKey: 'GDNAIWABFZTUS7TFCI5Q',
@@ -39,7 +40,11 @@ scraper(url, function (data) {
 
   var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/' + Date.now() +'.mp3 -y';
   console.log(cmd);
-  exec(cmd, {silent:true}).output;
+  //exec(cmd, {silent:true});
+  exec(cmd);
+
+  // use this to edit the mp3 metadata (add an image, creator, link to article, etc)
+  // https://www.npmjs.com/package/ffmetadata
 });
 
 function scraper(url, callback) {
