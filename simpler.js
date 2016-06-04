@@ -17,6 +17,7 @@ var entities = new Entities();
 
 var args = process.argv.slice(2);
 url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
+//console.log(url);
 
 fetchArticle(url, function(data) {
   createSpeech(data, function(file_list) {
@@ -48,10 +49,11 @@ function scraper(url, callback) {
 }
 
 function createSpeech(data, callback) {
-  //console.log(data);
   var concat_list = 'concat:';
   var article = data.title + '\n' + data.contents;
-  article.split(/\n/).forEach(function (line, i) {
+  article.split("\n").forEach(function (line, i) {
+    console.log(line);
+    console.log('----')
     // add pauses between title and also when we detect any whitespace-lines
     if (/\S/.test(line)) {
       ivona.createVoice(line, {
