@@ -18,7 +18,36 @@ var entities = new Entities();
 var args = process.argv.slice(2);
 url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
 
-scraper(url, function (data) {
+fetchArticle(url, function(data) {
+  createSpeech(data, function(file_list) {
+    createMP3(file_list);
+  });
+});
+
+function fetchArticle(url, callback) {
+  scraper(url, function(data) {
+    callback(data);
+  });
+}
+
+function scraper(url, callback) {
+  request(url, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      doc = JSON.parse(body);
+
+      var obj = {
+          "url": url,
+          "title": doc.title,
+          "excerpt": doc.excerpt,
+          "lead_image_url": doc.lead_image_url,
+          "contents": stripHTML(doc.content || "")
+      };
+      callback(obj);
+    }
+  });
+}
+
+function createSpeech(data, callback) {
   //console.log(data);
   var concat_list = 'concat:';
   var article = data.title + '\n' + data.contents;
@@ -37,32 +66,18 @@ scraper(url, function (data) {
       concat_list += 'tmp/text-' + i + '.mp3|';
     }
   });
+  callback(concat_list);
+}
 
+function createMP3(concat_list) {
   var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/' + Date.now() +'.mp3 -y';
   console.log(cmd);
-  //exec(cmd, {silent:true});
-  exec(cmd);
+  exec(cmd, {silent:true});
+  //exec(cmd);
 
   // use this to edit the mp3 metadata (add an image, creator, link to article, etc)
   // https://www.npmjs.com/package/ffmetadata
-});
-
-function scraper(url, callback) {
-  request(url, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      doc = JSON.parse(body);
-
-      var obj = {
-          "url": url,
-          "title": doc.title,
-          "excerpt": doc.excerpt,
-          "lead_image_url": doc.lead_image_url,
-          "contents": stripHTML(doc.content || "")
-      };
-      callback(obj);
-    }
-  });
-}
+};
 
 function stripHTML(html) {
     var clean = sanitizer.sanitize(html, function (str) {
