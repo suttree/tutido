@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 var fs = require('fs'),
   Ivona = require('ivona-node'),
   request = require('request'),
@@ -16,8 +17,8 @@ var ivona = new Ivona({
 var entities = new Entities();
 
 var args = process.argv.slice(2);
-url = "http://readability.com/api/content/v1/parser?url=" + args[0] + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
-//console.log(url);
+url = "http://readability.com/api/content/v1/parser?url=" + encodeURIComponent(args[0]) + "&token=047be2416589ced8d31b1f929286c2b9087eee7b"
+console.log(url);
 
 fetchArticle(url, function(data) {
   createSpeech(data, function(file_list) {
@@ -51,7 +52,7 @@ function scraper(url, callback) {
 function createSpeech(data, callback) {
   var concat_list = 'concat:';
   var article = data.title + '\n' + data.contents;
-  article.split("\n").forEach(function (line, i) {
+  splitArticle(article).forEach(function (line, i) {
     console.log(line);
     console.log('----')
     // add pauses between title and also when we detect any whitespace-lines
@@ -68,9 +69,42 @@ function createSpeech(data, callback) {
       concat_list += 'tmp/text-' + i + '.mp3|';
     }
   });
+
+  // could progressively add to the main mp3 here, one file at a time
+  // not very performant but better than the hit or miss situation right now?
   callback(concat_list);
 }
 
+// rename this method
+// could use a tokenizer here
+// https://www.npmjs.com/package/summarizely
+// https://github.com/contours/node-splitta
+// https://www.npmjs.com/package/sentence-tokenizer
+// https://github.com/NaturalNode/natural
+// http://julian.com/research/blast/
+function splitArticle(article) {
+    if (article.split(/\n/).length > 5) {
+      return article.split(/\n/);
+    } else if (article.split(/[.|!|?]\s/).length > 3) {
+      // need a regex to keep that splitting element (the . or ! or ?)
+      var piece = '';
+      var pieces = [];
+      var sentences = article.split(/[.|!|?]\s/);
+      for(var i = 0, len = sentences.length; i < len; i++) {
+        piece += sentences[i] + '. ';
+        if (piece.length > 1000) {
+          pieces.push(piece);
+          piece = '';
+        }
+      }
+      pieces.push(piece);
+      return pieces;
+    } else {
+      return article.match(/[\s\S]{1,100}/g) || [];
+    }
+}
+
+// use the article title as the filename
 function createMP3(concat_list) {
   var cmd = 'ffmpeg -i "' + concat_list.slice(0, -1) + '" -c copy content/' + Date.now() +'.mp3 -y';
   console.log(cmd);
